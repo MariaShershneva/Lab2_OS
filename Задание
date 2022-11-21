@@ -1,0 +1,74 @@
+import threading
+from itertools import *
+import hashlib
+import time
+from threading import Lock
+
+char = 'abcdefghijklmnopqrstuvwxyz'
+
+lock = Lock()
+stop_thread = False
+
+
+def checkPassword(password):
+    hash_object = hashlib.sha256(password.encode('utf-8'))
+    hex_dig = hash_object.hexdigest()
+    return hex_dig
+
+
+def thread_job(number, count, password):
+    c1 = 26 // count
+    str = ''
+    global stop_thread
+    if number == count - 1:
+        for i in range(c1 * number + 97, c1 * number + 97 + c1 + (26 % count)):
+            str += chr(i)
+        for cur in product(str, repeat=1):
+            for cur1 in product(char, repeat=4):
+                variant = ''.join(cur + cur1)
+                lock.acquire()
+                if stop_thread is True:
+                    lock.release()
+                    break
+                lock.release()
+                if checkPassword(variant) == password:
+                    print(variant)
+                    lock.acquire()
+                    stop_thread = True
+                    lock.release()
+    else:
+        for i in range(c1 * number + 97, c1 * number + 97 + c1):
+            str += chr(i)
+        for cur in product(str, repeat=1):
+            for cur1 in product(char, repeat=4):
+                variant = ''.join(cur + cur1)
+                lock.acquire()
+                if stop_thread is True:
+                    lock.release()
+                    break
+                lock.release()
+                if checkPassword(variant) == password:
+                    print(variant)
+                    lock.acquire()
+                    stop_thread = True
+                    lock.release()
+
+
+def run_threads(count, password):
+    threads = [
+        threading.Thread(target=thread_job, args=(i, count, password))
+        for i in range(0, count)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+
+print('Введите количество потоков')
+count = int(input())
+print('Введите строку которую хотите сравнить')
+password = input()
+start_time = time.time()
+run_threads(count, password)
+print("--- %s seconds ---" % (time.time() - start_time))
